@@ -11,9 +11,9 @@
     {
       "id": "guide-title-input",
       "type": "input",
-      "name": "Main Topic",
-      "description": "What topic should this article cover?",
-      "placeholder": "e.g., Getting Started with Frevana Workflow Automation",
+      "name": "Guide Title",
+      "description": "The title of your guide",
+      "placeholder": "Getting Started with Frevana Workflow Automation",
       "required": true
     },
     {
