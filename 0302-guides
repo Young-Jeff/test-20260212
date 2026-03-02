@@ -1,0 +1,145 @@
+{
+  "userInputs": [
+    {
+      "id": "guide-url-input",
+      "type": "url",
+      "name": "Product link",
+      "description": "The URL of the product or feature you want to create a guide for",
+      "placeholder": "https://example.com",
+      "required": true,
+      "teamInput": "team.input.productLink"
+    },
+    {
+      "id": "guide-title-input",
+      "type": "input",
+      "name": "Title",
+      "description": "The title of your guide",
+      "placeholder": "How to do xyz",
+      "required": true
+    },
+    {
+      "id": "guide-type-input",
+      "type": "combobox",
+      "name": "Guide category",
+      "description": "Choose from the list or type a custom category.",
+      "options": [
+        "Getting Started Tutorial",
+        "How-to Guide",
+        "Best Practices",
+        "Troubleshooting Guide",
+        "Feature Deep Dive",
+        "Integration Guide",
+        "API Documentation"
+      ],
+      "required": true,
+      "extra": {
+        "selectValues": "Getting Started Tutorial, How-to Guide, Best Practices, Troubleshooting Guide, Feature Deep Dive, Integration Guide, API Documentation, Other"
+      },
+      "placeholder": "e.g. How-to Guide, Tutorial, Case Study, Best Practices..."
+    },
+    {
+      "id": "key-topics-input",
+      "type": "keywords",
+      "name": "Keywords",
+      "description": "Main topics or steps that should be included in the guide",
+      "placeholder": "Keyword 1, keyword 2...",
+      "required": true
+    }
+  ],
+  "workflows": [
+    {
+      "id": "step-1-extract-product-info",
+      "nameV2": "Extract key product info",
+      "type": "fetch_web",
+      "outputFormat": "text",
+      "prompt": "@[Question-1 Product/Feature URL](guide-url-input)\n\nExtract only: product name, key features (max 5), and main use cases (max 3). Keep response under 500 words."
+    },
+    {
+      "id": "step-2-parse-topics",
+      "nameV2": "Parse key topics",
+      "type": "python_script",
+      "outputFormat": "text",
+      "script": "# Python script to parse and structure key topics\ndef main():\n    topics_str = data.get('key-topics-input', '').strip()\n    \n    if not topics_str:\n        return \"No topics provided\"\n    \n    # Split topics by comma or newline\n    topics = [t.strip() for t in topics_str.replace('\\n', ',').split(',') if t.strip()]\n    \n    # Limit to 5 topics to avoid prompt overload\n    topics = topics[:5]\n    \n    # Format as simple list\n    result = ', '.join(topics)\n    \n    return result\n\nif __name__ == \"__main__\":\n    output = main()\n    print(output)",
+      "nodeIds": ["key-topics-input"]
+    },
+    {
+      "id": "step-3-create-outline",
+      "nameV2": "Create guide outline",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Create a concise guide outline:\n\n**Title:** @[Question-2 Guide Title](guide-title-input)\n**Type:** @[Question-3 Guide Type](guide-type-input)\n**Topics:** @[Step-2 Parse key topics](step-2-parse-topics)\n\nCreate an outline with:\n1. Introduction (1 paragraph overview)\n2. Main instructional sections (3-5 based on topics)\n3. Troubleshooting section (common issues)\n4. Conclusion with next steps\n\nFor each section, write:\n- Section heading\n- 1 sentence describing what content to include\n- Focus on text descriptions, not visual elements\n\nKeep outline brief and practical."
+    },
+    {
+      "id": "step-4-generate-introduction",
+      "nameV2": "Generate introduction",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Write a compelling introduction section for this guide:\n\n**Title:** @[Question-2 Guide Title](guide-title-input)\n**Product:** @[Step-1 Extract key product info](step-1-extract-product-info)\n\nInclude:\n- Brief overview (2-3 sentences)\n- What readers will learn (3-4 bullet points)\n- Why it matters (1-2 sentences)\n- Estimated time to complete\n\nWrite in Markdown format. Be concise and engaging."
+    },
+    {
+      "id": "step-5-generate-main-content",
+      "nameV2": "Generate main content",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Write the main content sections based on this outline:\n\n@[Step-3 Create guide outline](step-3-create-outline)\n\n**Product Info:** @[Step-1 Extract key product info](step-1-extract-product-info)\n\nFor each main section:\n- Use clear Markdown headings (##, ###)\n- Write step-by-step instructions with numbered lists\n- Add code blocks where relevant with proper language tags\n- Add tips using: \u003E 💡 **Tip:** your tip here\n- Add warnings using: \u003E ⚠️ **Warning:** your warning here\n- Describe visual elements in text instead of using screenshot placeholders\n- Keep each step focused on one action\n- Use clear descriptions like \"In the top-right corner, you'll see...\" instead of \"[Screenshot: ...]\"\n\n**IMPORTANT:** Do NOT include any reference citations like [Reference 1], [1], [Source], etc. Write in a direct, instructional style without academic citations or references. All information should be presented as authoritative guidance.\n\nWrite practical, actionable content. Skip the introduction (already done). Focus only on the main instructional sections."
+    },
+    {
+      "id": "step-6-generate-conclusion",
+      "nameV2": "Generate conclusion",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Write a conclusion section for this guide:\n\n**Title:** @[Question-2 Guide Title](guide-title-input)\n**Type:** @[Question-3 Guide Type](guide-type-input)\n\nInclude:\n1. Quick recap (2-3 sentences summarizing what was covered)\n2. Next steps (3-4 suggestions for what to do next)\n3. Related resources or guides (2-3 suggestions)\n4. Troubleshooting section (3-4 common issues and quick solutions)\n\nUse Markdown format. Keep it encouraging and helpful."
+    },
+    {
+      "id": "step-7-combine-sections",
+      "nameV2": "Combine all sections",
+      "type": "python_script",
+      "outputFormat": "text",
+      "script": "# Combine all guide sections into one document\ndef main():\n    title = data.get('guide-title-input', 'Guide')\n    introduction = data.get('step-4-generate-introduction', '')\n    main_content = data.get('step-5-generate-main-content', '')\n    conclusion = data.get('step-6-generate-conclusion', '')\n    \n    # Build the complete guide\n    guide = f\"# {title}\\n\\n\"\n    \n    # Add introduction\n    if introduction:\n        guide += introduction + \"\\n\\n\"\n    \n    # Add main content\n    if main_content:\n        guide += main_content + \"\\n\\n\"\n    \n    # Add conclusion\n    if conclusion:\n        guide += conclusion + \"\\n\\n\"\n    \n    # Add metadata footer\n    guide_type = data.get('guide-type-input', 'Guide')\n    guide += \"\\n---\\n\\n\"\n    guide += f\"*Guide Type: {guide_type}*\\n\"\n    \n    return guide\n\nif __name__ == \"__main__\":\n    output = main()\n    print(output)",
+      "nodeIds": [
+        "guide-title-input",
+        "step-4-generate-introduction",
+        "step-5-generate-main-content",
+        "step-6-generate-conclusion",
+        "guide-type-input"
+      ]
+    },
+    {
+      "id": "step-8-polish-formatting",
+      "nameV2": "Polish and format",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Review and polish this guide for formatting consistency:\n\n@[Step-7 Combine all sections](step-7-combine-sections)\n\nCheck and fix:\n1. Markdown heading hierarchy (no skipped levels)\n2. Consistent list formatting\n3. Proper code block syntax\n4. Clear section breaks\n5. Fix any formatting issues\n6. **REMOVE any reference citations** like [Reference 1], [1], [Source], etc. - these should be completely removed from the text\n\nDo NOT rewrite content. Only fix formatting and structure. Return the polished guide in Markdown format without code block markers."
+    },
+    {
+      "id": "step-9-generate-summary",
+      "nameV2": "Generate summary card",
+      "type": "ai_prompt",
+      "outputFormat": "text",
+      "prompt": "Create a brief summary card:\n\n**Guide Title:** @[Question-2 Guide Title](guide-title-input)\n**Type:** @[Question-3 Guide Type](guide-type-input)\n**Topics:** @[Step-2 Parse key topics](step-2-parse-topics)\n\nFormat:\n```\n## Guide Summary\n\n**Description:** [One sentence, max 160 characters]\n\n**What You'll Learn:**\n- [Point 1]\n- [Point 2]\n- [Point 3]\n\n**Estimated Time:** [X minutes]\n\n**Difficulty:** [Beginner/Intermediate/Advanced]\n```\n\nDo not wrap in code block markers."
+    }
+  ],
+  "results": [
+    {
+      "type": "html",
+      "fields": ["content", "summary"],
+      "items": {
+        "content": "step-8-polish-formatting"
+      },
+      "metadata": {
+        "templateId": "guides-knowledge-base",
+        "exportFormats": ["markdown", "html", "pdf"]
+      }
+    }
+  ],
+  "inputValues": {
+    "guide-url-input": []
+  },
+  "version": "1.0",
+  "metadata": {
+    "author": "Jeff",
+    "createdAt": "2026-03-02T08:52:39.681Z"
+  },
+  "frequency": "-1",
+  "workflowConnects": []
+}
